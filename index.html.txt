@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Telegram Mini App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        tg: {
+                            bg: 'var(--tg-theme-bg-color, #0f172a)',
+                            secondaryBg: 'var(--tg-theme-secondary-bg-color, #1e293b)',
+                            text: 'var(--tg-theme-text-color, #f8fafc)',
+                            hint: 'var(--tg-theme-hint-color, #94a3b8)',
+                            link: 'var(--tg-theme-link-color, #38bdf8)',
+                            button: 'var(--tg-theme-button-color, #2563eb)',
+                            buttonText: 'var(--tg-theme-button-text-color, #ffffff)',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: var(--tg-theme-bg-color, #0f172a);
+            color: var(--tg-theme-text-color, #f8fafc);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .active-tab {
+            color: #3b82f6;
+            position: relative;
+        }
+
+        .active-tab::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 3px;
+            background-color: #3b82f6;
+            border-radius: 9999px;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .light .glass-card {
+            background: rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-24 flex flex-col antialiased">
+
+    <header class="sticky top-0 z-30 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div id="user-avatar" class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
+                U
+            </div>
+            <div>
+                <h1 id="user-name" class="font-semibold text-sm leading-tight text-slate-100">Имя Пользователя</h1>
+                <p id="user-username" class="text-xs text-slate-400">@username</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <!-- Language Toggle Button -->
+            <button id="lang-btn" onclick="toggleLanguage()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold px-2.5 py-1.5 transition text-slate-300 flex items-center gap-1 border border-slate-700/50">
+                <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+                <span id="lang-indicator">RU</span>
+            </button>
+            
+            <!-- Theme Toggle Button -->
+            <button id="theme-btn" onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 transition text-slate-300 border border-slate-700/50">
+                <i id="theme-icon" data-lucide="moon" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 p-4 max-w-lg mx-auto w-full space-y-6">
+
+        <!-- Banner Announcement -->
+        <div id="hero-banner" class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-5 text-white shadow-xl">
+            <div class="relative z-10">
+                <span class="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider inline-block mb-2 backdrop-blur-sm" id="banner-badge">PROMO</span>
+                <h2 class="text-xl font-bold mb-1" id="banner-title">Welcome to Mini App</h2>
+                <p class="text-xs text-blue-100 max-w-[85%]" id="banner-desc">Explore products, perform tasks, and earn rewards instantly inside Telegram.</p>
+            </div>
+            <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+        </div>
+
+        <!-- TAB 1: STORE / SHOP PAGE -->
+        <section id="tab-shop" class="space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-base font-semibold tracking-wide flex items-center gap-2">
+                    <i data-lucide="shopping-bag" class="w-4 h-4 text-blue-400"></i>
+                    <span data-i18n="catalog">Каталог товаров</span>
+                </h3>
+                <span class="text-xs text-slate-400" id="cart-counter-text">Корзина: <span id="cart-count" class="font-bold text-blue-400">0</span></span>
+            </div>
+
+            <!-- Products Grid -->
+            <div class="grid grid-cols-2 gap-3" id="products-grid">
+                <!-- Products dynamically inserted via JS -->
+            </div>
+        </section>
+
+        <!-- TAB 2: UTILITIES / TASKS PAGE (Hidden by default) -->
+        <section id="tab-tasks" class="space-y-4 hidden">
+            <div class="flex justify-between items-center">
+                <h3 class="text-base font-semibold tracking-wide flex items-center gap-2">
+                    <i data-lucide="check-square" class="w-4 h-4 text-emerald-400"></i>
+                    <span data-i18n="tasks">Задания и Награды</span>
+                </h3>
+                <span class="text-xs text-emerald-400 font-semibold" id="user-balance">Баланс: 250 PTS</span>
+            </div>
+
+            <div class="space-y-2.5">
+                <!-- Task item 1 -->
+                <div class="glass-card p-3.5 rounded-xl flex items-center justify-between border border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                            <i data-lucide="send" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-semibold" data-i18n="task_tg_channel">Подписка на канал</h4>
+                            <p class="text-[10px] text-slate-400">+50 PTS</p>
+                        </div>
+                    </div>
+                    <button onclick="completeTask(this, 50)" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg transition font-medium" data-i18n="claim">
+                        Выполнить
+                    </button>
+                </div>
+
+                <!-- Task item 2 -->
+                <div class="glass-card p-3.5 rounded-xl flex items-center justify-between border border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                            <i data-lucide="user-plus" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-semibold" data-i18n="task_invite">Пригласить друга</h4>
+                            <p class="text-[10px] text-slate-400">+100 PTS</p>
+                        </div>
+                    </div>
+                    <button onclick="inviteFriend()" class="bg-purple-600 hover:bg-purple-500 text-white text-xs px-3 py-1.5 rounded-lg transition font-medium" data-i18n="invite">
+                        Пригласить
+                    </button>
+                </div>
+
+                <!-- Task item 3 -->
+                <div class="glass-card p-3.5 rounded-xl flex items-center justify-between border border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                            <i data-lucide="sparkles" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-semibold" data-i18n="task_daily">Ежедневный бонус</h4>
+                            <p class="text-[10px] text-slate-400">+25 PTS</p>
+                        </div>
+                    </div>
+                    <button onclick="completeTask(this, 25)" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-1.5 rounded-lg transition font-medium" data-i18n="claim">
+                        Забрать
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: PROFILE / SETTINGS (Hidden by default) -->
+        <section id="tab-profile" class="space-y-4 hidden">
+            <div class="glass-card rounded-2xl p-4 border border-slate-800 space-y-3">
+                <h3 class="text-sm font-semibold border-b border-slate-800 pb-2 flex items-center gap-2">
+                    <i data-lucide="user" class="w-4 h-4 text-indigo-400"></i>
+                    <span data-i18n="profile_details">Детали профиля</span>
+                </h3>
+                <div class="space-y-2 text-xs">
+                    <div class="flex justify-between py-1 border-b border-slate-800/50">
+                        <span class="text-slate-400">Telegram ID</span>
+                        <span id="info-id" class="font-mono text-slate-200">123456789</span>
+                    </div>
+                    <div class="flex justify-between py-1 border-b border-slate-800/50">
+                        <span class="text-slate-400" data-i18n="language">Язык системы</span>
+                        <span id="info-lang" class="text-slate-200">ru</span>
+                    </div>
+                    <div class="flex justify-between py-1">
+                        <span class="text-slate-400" data-i18n="platform">Платформа</span>
+                        <span id="info-platform" class="text-slate-200">mobile</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="space-y-2">
+                <button onclick="triggerHaptic('impact', 'medium'); showPopup();" class="w-full glass-card hover:bg-slate-800/50 p-3 rounded-xl flex items-center justify-between text-xs transition border border-slate-800">
+                    <span class="flex items-center gap-2">
+                        <i data-lucide="bell" class="w-4 h-4 text-amber-400"></i>
+                        <span data-i18n="test_popup">Проверить Telegram Popup</span>
+                    </span>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+                </button>
+                
+                <button onclick="triggerHaptic('notification', 'success'); sendDataToBot();" class="w-full glass-card hover:bg-slate-800/50 p-3 rounded-xl flex items-center justify-between text-xs transition border border-slate-800">
+                    <span class="flex items-center gap-2">
+                        <i data-lucide="send" class="w-4 h-4 text-emerald-400"></i>
+                        <span data-i18n="send_to_bot">Отправить данные боту</span>
+                    </span>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <nav class="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/90 backdrop-blur-md border-t border-slate-800/80 px-6 py-2">
+        <div class="max-w-lg mx-auto flex justify-around items-center">
+            <button onclick="switchTab('shop')" id="nav-shop" class="flex flex-col items-center gap-1 text-slate-400 text-[10px] font-medium transition active-tab">
+                <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                <span data-i18n="nav_shop">Магазин</span>
+            </button>
+            
+            <button onclick="switchTab('tasks')" id="nav-tasks" class="flex flex-col items-center gap-1 text-slate-400 text-[10px] font-medium transition">
+                <i data-lucide="check-square" class="w-5 h-5"></i>
+                <span data-i18n="nav_tasks">Задания</span>
+            </button>
+            
+            <button onclick="switchTab('profile')" id="nav-profile" class="flex flex-col items-center gap-1 text-slate-400 text-[10px] font-medium transition">
+                <i data-lucide="user" class="w-5 h-5"></i>
+                <span data-i18n="nav_profile">Профиль</span>
+            </button>
+        </div>
+    </nav>
+
+    <script>
+        // --- Telegram WebApp SDK Initialization ---
+        const tg = window.Telegram ? window.Telegram.WebApp : null;
+
+        if (tg) {
+            tg.ready();
+            tg.expand();
+            // Enable closing confirmation if needed
+            tg.enableClosingConfirmation();
+        }
+
+        // State variables
+        let currentLang = 'ru';
+        let cart = [];
+        let balance = 250;
+
+        // Translation Dictionary
+        const translations = {
+            ru: {
+                catalog: "Каталог товаров",
+                tasks: "Задания и Награды",
+                profile_details: "Детали профиля",
+                claim: "Забрать",
+                invite: "Пригласить",
+                nav_shop: "Магазин",
+                nav_tasks: "Задания",
+                nav_profile: "Профиль",
+                language: "Язык системы",
+                platform: "Платформа",
+                test_popup: "Проверить Telegram Popup",
+                send_to_bot: "Отправить данные боту",
+                task_tg_channel: "Подписка на канал",
+                task_invite: "Пригласить друга",
+                task_daily: "Ежедневный бонус",
+                add_to_cart: "В корзину",
+                checkout: "Оформить заказ",
+                cart_text: "Корзина: "
+            },
+            en: {
+                catalog: "Product Catalog",
+                tasks: "Tasks & Rewards",
+                profile_details: "Profile Details",
+                claim: "Claim",
+                invite: "Invite",
+                nav_shop: "Store",
+                nav_tasks: "Tasks",
+                nav_profile: "Profile",
+                language: "System Language",
+                platform: "Platform",
+                test_popup: "Test Telegram Popup",
+                send_to_bot: "Send Data to Bot",
+                task_tg_channel: "Subscribe Channel",
+                task_invite: "Invite a Friend",
+                task_daily: "Daily Bonus",
+                add_to_cart: "Add to Cart",
+                checkout: "Checkout",
+                cart_text: "Cart: "
+            }
+        };
+
+        // Sample Catalog Data
+        const products = [
+            { id: 1, title: 'Telegram Premium (1 мес)', price: 299, icon: 'zap', color: 'from-amber-500 to-orange-600' },
+            { id: 2, title: 'Telegram Stars (100 шт)', price: 199, icon: 'star', color: 'from-yellow-400 to-amber-500' },
+            { id: 3, title: 'VIP Статус (30 дней)', price: 499, icon: 'shield-check', color: 'from-blue-500 to-indigo-600' },
+            { id: 4, title: 'NFT Коллекционка #01', price: 999, icon: 'gem', color: 'from-purple-500 to-pink-600' }
+        ];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initLucideIcons();
+            loadUserData();
+            renderProducts();
+            setupMainButton();
+        });
+
+        function initLucideIcons() {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
+
+        function loadUserData() {
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                const user = tg.initDataUnsafe.user;
+                document.getElementById('user-name').textContent = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Telegram User';
+                document.getElementById('user-username').textContent = user.username ? `@${user.username}` : 'No username';
+                
+                // Avatar initials
+                const initials = (user.first_name ? user.first_name[0] : 'U').toUpperCase();
+                document.getElementById('user-avatar').textContent = initials;
+
+                // Profile tab info
+                document.getElementById('info-id').textContent = user.id || 'N/A';
+                document.getElementById('info-lang').textContent = user.language_code || 'ru';
+                document.getElementById('info-platform').textContent = tg.platform || 'mobile';
+            }
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('products-grid');
+            grid.innerHTML = products.map(product => `
+                <div class="glass-card rounded-2xl p-3.5 flex flex-col justify-between border border-slate-800 hover:border-slate-700 transition">
+                    <div class="space-y-2">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr ${product.color} flex items-center justify-center text-white shadow-md">
+                            <i data-lucide="${product.icon}" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-semibold leading-snug line-clamp-2">${product.title}</h4>
+                            <p class="text-xs font-bold text-blue-400 mt-1">${product.price} ₽</p>
+                        </div>
+                    </div>
+                    <button onclick="addToCart(${product.id})" class="mt-3 w-full bg-slate-800 hover:bg-slate-700 text-blue-400 text-xs py-1.5 rounded-lg border border-slate-700 transition font-medium flex items-center justify-center gap-1">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        <span data-i18n="add_to_cart">${translations[currentLang].add_to_cart}</span>
+                    </button>
+                </div>
+            `).join('');
+            initLucideIcons();
+        }
+
+        function triggerHaptic(type = 'impact', style = 'light') {
+            if (!tg || !tg.HapticFeedback) return;
+            if (type === 'impact') {
+                tg.HapticFeedback.impactOccurred(style);
+            } else if (type === 'notification') {
+                tg.HapticFeedback.notificationOccurred(style);
+            } else if (type === 'selection') {
+                tg.HapticFeedback.selectionChanged();
+            }
+        }
+
+        // Cart functionality
+        function addToCart(productId) {
+            triggerHaptic('impact', 'light');
+            const product = products.find(p => p.id === productId);
+            if (product) {
+                cart.push(product);
+                updateCartUI();
+            }
+        }
+
+        function updateCartUI() {
+            document.getElementById('cart-count').textContent = cart.length;
+            
+            // Telegram MainButton control
+            if (tg && tg.MainButton) {
+                if (cart.length > 0) {
+                    const totalPrice = cart.reduce((sum, item) => sum + item.price, 0);
+                    tg.MainButton.setText(`${translations[currentLang].checkout} (${totalPrice} ₽)`);
+                    tg.MainButton.show();
+                } else {
+                    tg.MainButton.hide();
+                }
+            }
+        }
+
+        function setupMainButton() {
+            if (tg && tg.MainButton) {
+                tg.MainButton.setParams({
+                    color: '#2563eb',
+                    text_color: '#ffffff'
+                });
+                tg.MainButton.onClick(() => {
+                    triggerHaptic('notification', 'success');
+                    sendCartData();
+                });
+            }
+        }
+
+        function sendCartData() {
+            if (tg) {
+                tg.sendData(JSON.stringify({
+                    action: 'checkout',
+                    items: cart,
+                    total: cart.reduce((sum, item) => sum + item.price, 0)
+                }));
+            }
+        }
+
+        // Tasks & Rewards functionality
+        function completeTask(btn, points) {
+            triggerHaptic('notification', 'success');
+            balance += points;
+            document.getElementById('user-balance').textContent = `Баланс: ${balance} PTS`;
+            btn.disabled = true;
+            btn.className = "bg-slate-800 text-slate-500 text-xs px-3 py-1.5 rounded-lg font-medium cursor-not-allowed";
+            btn.textContent = "Готово";
+        }
+
+        function inviteFriend() {
+            triggerHaptic('impact', 'medium');
+            if (tg) {
+                tg.openTelegramLink('https://t.me/share/url?url=https://t.me/your_bot_username&text=Присоединяйся%20к%20Mini%20App!');
+            }
+        }
+
+        // Popup demo
+        function showPopup() {
+            if (tg && tg.showPopup) {
+                tg.showPopup({
+                    title: 'Telegram Native Popup',
+                    message: 'Это интерактивное системное окно Telegram WebApp!',
+                    buttons: [{ type: 'ok' }]
+                });
+            } else {
+                alert('Telegram WebApp Popup API не поддерживается в браузере.');
+            }
+        }
+
+        function sendDataToBot() {
+            if (tg) {
+                tg.sendData(JSON.stringify({ action: 'ping', timestamp: Date.now() }));
+            }
+        }
+
+        function switchTab(tabName) {
+            triggerHaptic('selection');
+
+            // Hide all tabs
+            ['shop', 'tasks', 'profile'].forEach(name => {
+                const section = document.getElementById(`tab-${name}`);
+                const navBtn = document.getElementById(`nav-${name}`);
+                
+                if (name === tabName) {
+                    section.classList.remove('hidden');
+                    navBtn.classList.add('active-tab');
+                    navBtn.classList.remove('text-slate-400');
+                } else {
+                    section.classList.add('hidden');
+                    navBtn.classList.remove('active-tab');
+                    navBtn.classList.add('text-slate-400');
+                }
+            });
+        }
+
+        function toggleTheme() {
+            triggerHaptic('impact', 'light');
+            const body = document.body;
+            const themeIcon = document.getElementById('theme-icon');
+            
+            if (body.classList.contains('light')) {
+                body.classList.remove('light');
+                themeIcon.setAttribute('data-lucide', 'moon');
+            } else {
+                body.classList.add('light');
+                themeIcon.setAttribute('data-lucide', 'sun');
+            }
+            initLucideIcons();
+        }
+
+        function toggleLanguage() {
+            triggerHaptic('impact', 'light');
+            currentLang = currentLang === 'ru' ? 'en' : 'ru';
+            document.getElementById('lang-indicator').textContent = currentLang.toUpperCase();
+
+            // Update DOM translations
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[currentLang][key]) {
+                    el.textContent = translations[currentLang][key];
+                }
+            });
+
+            // Re-render components with translated texts
+            renderProducts();
+            updateCartUI();
+        }
+    </script>
+</body>
+</html>
